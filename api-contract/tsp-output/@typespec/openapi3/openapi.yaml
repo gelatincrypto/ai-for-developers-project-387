@@ -1,0 +1,289 @@
+openapi: 3.0.0
+info:
+  title: Календарь звонков
+  version: 1.0.0
+tags:
+  - name: Health
+  - name: Owner
+  - name: EventTypes
+  - name: Slots
+  - name: Bookings
+  - name: OwnerBookings
+paths:
+  /api/bookings:
+    post:
+      operationId: createBooking
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingConfirmation'
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+  /api/event-types:
+    get:
+      operationId: listEventTypes
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventType'
+      tags:
+        - EventTypes
+    post:
+      operationId: createEventType
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+      tags:
+        - EventTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventTypeInput'
+  /api/event-types/{eventTypeId}/slots:
+    get:
+      operationId: listSlots
+      parameters:
+        - name: eventTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableSlots'
+      tags:
+        - Slots
+  /api/health:
+    get:
+      operationId: getHealth
+      description: Проверить доступность API.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+      tags:
+        - Health
+  /api/owner/bookings:
+    get:
+      operationId: listOwnerBookings
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OwnerMeeting'
+      tags:
+        - OwnerBookings
+  /api/owner/session:
+    post:
+      operationId: login
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerSession'
+      tags:
+        - Owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnerCredentials'
+    get:
+      operationId: getOwnerSession
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerSession'
+      tags:
+        - Owner
+    delete:
+      operationId: logout
+      parameters: []
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+      tags:
+        - Owner
+components:
+  schemas:
+    AvailableSlot:
+      type: object
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+        end:
+          type: string
+    AvailableSlots:
+      type: object
+      required:
+        - ownerTimeZone
+        - windowStartDate
+        - slots
+      properties:
+        ownerTimeZone:
+          type: string
+        windowStartDate:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailableSlot'
+    BookingConfirmation:
+      type: object
+      required:
+        - id
+        - eventType
+        - start
+        - end
+      properties:
+        id:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/EventType'
+        start:
+          type: string
+        end:
+          type: string
+    BookingRequest:
+      type: object
+      required:
+        - eventTypeId
+        - start
+        - guestName
+        - guestEmail
+      properties:
+        eventTypeId:
+          type: string
+        start:
+          type: string
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+    EventType:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - durationMinutes
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          format: int32
+    EventTypeInput:
+      type: object
+      required:
+        - title
+        - description
+        - durationMinutes
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          format: int32
+          minimum: 1
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    OwnerCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    OwnerMeeting:
+      type: object
+      required:
+        - id
+        - eventType
+        - start
+        - end
+        - guestName
+        - guestEmail
+      properties:
+        id:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/EventType'
+        start:
+          type: string
+        end:
+          type: string
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+    OwnerSession:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
