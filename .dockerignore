@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.git/
+.github/
+.idea/
+.vs/
+.agents/
+docs/
+tests/
+**/calendar.db*
+**/*.tsbuildinfo

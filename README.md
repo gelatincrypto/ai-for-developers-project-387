@@ -125,9 +125,34 @@ npm run dev
 npm run build
 ```
 
-Результат находится в `frontend/dist`. Dev-proxy не входит в production-сборку;
-при развёртывании нужно отдельно маршрутизировать `/api` на backend и направлять
-запросы к SPA-маршрутам (например, `/booking`) на `index.html`.
+Результат находится в `frontend/dist`. Dev-proxy не входит в production-сборку.
+Корневой Dockerfile собирает frontend и backend вместе: ASP.NET Core обслуживает
+`/api` и SPA на одном порту, включая прямые переходы на `/booking` и `/owner`.
+
+## Docker и развёртывание
+
+Из корня репозитория:
+
+```bash
+docker build -t calendar .
+docker run --rm -p 8080:8080 -e PORT=8080 calendar
+```
+
+Откройте `http://localhost:8080/` или проверьте
+`http://localhost:8080/api/health`. Контейнер слушает `0.0.0.0` на порту из
+`PORT` (по умолчанию 8080). Если изменить `PORT`, измените и оба порта в
+аргументе `-p`.
+
+Для Render создайте Web Service из **этого** репозитория с Docker runtime и
+health check path `/api/health`; стартовая команда уже задана в Dockerfile.
+`Owner__Username` и `Owner__Password` задаются в настройках сервиса, не в образе.
+SQLite хранится в `/data/calendar.db` (путь можно изменить через
+`Calendar__DatabasePath`). Без постоянного диска данные исчезнут после
+перезапуска или повторного развёртывания: для реальных бронирований нужен
+постоянный том либо другое долговременное хранилище.
+
+После публикации сервиса добавьте сюда проверенную ссылку на него; ссылка на
+приложение предыдущего проекта не относится к этому репозиторию.
 
 ---
 
@@ -146,13 +171,13 @@ npm run build
 dotnet test Calendar.slnx
 ```
 
-В `tests/Calendar.Api.Tests` находится один smoke-тест xUnit: он запускает
-API через `WebApplicationFactory<Program>` и проверяет, что `GET /api/health`
-возвращает HTTP 200 и JSON `{"status":"ok"}`. Отдельно запускать backend
+В `tests/Calendar.Api.Tests` находятся xUnit-тесты API: они запускают
+приложение через `WebApplicationFactory<Program>` и проверяют health, вход
+владельца, типы событий, слоты и бронирования. Отдельно запускать backend
 или frontend не нужно.
 
-Фронтенд-тесты перехода на `/booking` и вызова API через SDK запускаются
-командой `npm --prefix frontend test`. Для них backend не нужен.
+Фронтенд-тесты страниц и работы с API запускаются командой
+`npm --prefix frontend test`. Для них backend не нужен.
 
 Зависимости backend восстанавливаются только из публичного nuget.org:
 репозиторный `NuGet.Config` исключает унаследованные источники пакетов.
