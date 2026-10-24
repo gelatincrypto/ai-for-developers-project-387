@@ -11,6 +11,16 @@ const statusLabels: Record<ApiStatus, string> = {
   unavailable: 'Сервер недоступен',
 }
 
+function bookingInfoText(confirmation: BookingConfirmation, ownerTimeZone: string) {
+  const date = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: ownerTimeZone, day: '2-digit', month: '2-digit', year: 'numeric',
+  }).format(new Date(confirmation.start))
+  const time = (value: string) => new Intl.DateTimeFormat('ru-RU', {
+    timeZone: ownerTimeZone, hour: '2-digit', minute: '2-digit',
+  }).format(new Date(value))
+  return `${confirmation.eventType.title} — ${date}, ${time(confirmation.start)}–${time(confirmation.end)} (${ownerTimeZone})`
+}
+
 function ownerDay(value: string, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
@@ -33,6 +43,7 @@ function BookingContent({ eventTypeId }: { eventTypeId?: string }) {
   const [guestEmail, setGuestEmail] = useState('')
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null)
   const [bookingError, setBookingError] = useState('')
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -110,6 +121,19 @@ function BookingContent({ eventTypeId }: { eventTypeId?: string }) {
     }).format(new Date(value))
   }
 
+  const bookingInfo = confirmation && calendar ? bookingInfoText(confirmation, calendar.ownerTimeZone) : ''
+
+  async function copyBookingInfo() {
+    if (!bookingInfo) return
+    setCopyStatus('idle')
+    try {
+      await navigator.clipboard.writeText(bookingInfo)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('error')
+    }
+  }
+
   const slotsByDay = new Map<string, AvailableSlots['slots']>()
   if (calendar) {
     for (const slot of calendar.slots) {
@@ -159,6 +183,17 @@ function BookingContent({ eventTypeId }: { eventTypeId?: string }) {
                     <Text>Тип события: {confirmation.eventType.title}</Text>
                     <Text>Начало: {showTime(confirmation.start, calendar.ownerTimeZone)}</Text>
                     <Text>Окончание: {showTime(confirmation.end, calendar.ownerTimeZone)}</Text>
+                    <Button onClick={() => void copyBookingInfo()}>Скопировать информацию</Button>
+                    {copyStatus === 'copied' && <Text role="status">Информация скопирована</Text>}
+                    {copyStatus === 'error' && <>
+                      <Text role="alert" c="red">Не удалось скопировать информацию. Скопируйте её вручную.</Text>
+                      <TextInput
+                        label="Текст для копирования"
+                        value={bookingInfo}
+                        readOnly
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                    </>}
                   </Paper>
                 ) : calendar.slots.length === 0 ? <Text>В ближайшие 14 дней свободных слотов нет</Text> : (
                   <>
