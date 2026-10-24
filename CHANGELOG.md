@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0 (2026-10-24)
+
+
+### Features
+
+* add calendar booking application ([b5fb3f2](https://github.com/gelatincrypto/ai-for-developers-project-387/commit/b5fb3f20d8773311d571d4b96e5f2f34928ff8e1))
+* serve calendar app from Docker image ([7c3d387](https://github.com/gelatincrypto/ai-for-developers-project-387/commit/7c3d3876a6645cf9e6adcfa30dfbbfe14e3388a3))
+
 ## 1.0.0 (2026-10-22)
 
 
