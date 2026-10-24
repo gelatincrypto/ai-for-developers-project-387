@@ -317,13 +317,20 @@ function stubConfirmedBooking() {
     }
   })
   vi.stubGlobal('fetch', vi.fn(async (request: { method: string; url: string }) => {
-    const data = request.url.endsWith('/api/health') ? '{"status":"ok"}'
-      : request.url.endsWith('/api/event-types')
-        ? '[{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30}]'
-        : request.url.endsWith('/slots')
-          ? '{"ownerTimeZone":"Europe/Moscow","windowStartDate":"2026-10-24","slots":[{"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}]}'
-          : '{"id":"booking-1","eventType":{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30},"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}'
-    return { ok: true, status: 200, headers: new Headers({ 'Content-Type': 'application/json' }), text: async () => data }
+    const respond = (data: string) => ({ ok: true, status: 200, headers: new Headers({ 'Content-Type': 'application/json' }), text: async () => data })
+    if (request.url.endsWith('/api/health')) {
+      return respond('{"status":"ok"}')
+    }
+    if (request.url.endsWith('/api/event-types')) {
+      return respond('[{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30}]')
+    }
+    if (request.url.endsWith('/slots')) {
+      return respond('{"ownerTimeZone":"Europe/Moscow","windowStartDate":"2026-10-24","slots":[{"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}]}')
+    }
+    if (request.method === 'POST' && request.url.endsWith('/api/bookings')) {
+      return respond('{"id":"booking-1","eventType":{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30},"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}')
+    }
+    throw new Error(`Неожиданный запрос: ${request.method} ${request.url}`)
   }))
 }
 
