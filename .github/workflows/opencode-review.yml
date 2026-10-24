@@ -40,4 +40,4 @@ jobs:
           PR #$PR_NUMBER:
           $diff")
           test -n "$response"
-          gh pr comment "$PR_NUMBER" --body "$response"
+          gh api --method POST "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" -f body="$response"
