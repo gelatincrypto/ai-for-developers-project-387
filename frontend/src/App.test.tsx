@@ -19,6 +19,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  Reflect.deleteProperty(navigator, 'clipboard')
 })
 
 test('посетитель переходит с главной на страницу бронирования', () => {
@@ -304,6 +305,68 @@ test('гость после конфликта выбирает другой с�
   expect(screen.getByText('Тип события: Консультация')).toBeTruthy()
   expect(screen.getByText(/Окончание:.*10:00/)).toBeTruthy()
   expect(screen.getByText('Часовой пояс владельца: Europe/Moscow')).toBeTruthy()
+})
+
+function stubConfirmedBooking() {
+  vi.stubGlobal('Request', class {
+    url: string
+    method: string
+    constructor(url: string, init: RequestInit) {
+      this.url = url
+      this.method = init.method ?? 'GET'
+    }
+  })
+  vi.stubGlobal('fetch', vi.fn(async (request: { method: string; url: string }) => {
+    const data = request.url.endsWith('/api/health') ? '{"status":"ok"}'
+      : request.url.endsWith('/api/event-types')
+        ? '[{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30}]'
+        : request.url.endsWith('/slots')
+          ? '{"ownerTimeZone":"Europe/Moscow","windowStartDate":"2026-10-24","slots":[{"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}]}'
+          : '{"id":"booking-1","eventType":{"id":"consultation","title":"Консультация","description":"Тест","durationMinutes":30},"start":"2026-10-26T09:30:00+03:00","end":"2026-10-26T10:00:00+03:00"}'
+    return { ok: true, status: 200, headers: new Headers({ 'Content-Type': 'application/json' }), text: async () => data }
+  }))
+}
+
+async function confirmBooking() {
+  render(
+    <MantineProvider env="test">
+      <MemoryRouter initialEntries={['/booking/consultation']}>
+        <App />
+      </MemoryRouter>
+    </MantineProvider>,
+  )
+  fireEvent.click(await screen.findByRole('button', { name: /26 окт/i }))
+  fireEvent.click(screen.getByRole('button', { name: /26 окт.*09:30/ }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ваше имя' }), { target: { value: 'Гость' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), { target: { value: 'guest@example.com' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Забронировать' }))
+  await screen.findByRole('heading', { name: 'Бронирование подтверждено' })
+}
+
+test('гость копирует информацию о подтверждённой встрече', async () => {
+  stubConfirmedBooking()
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+  await confirmBooking()
+  fireEvent.click(screen.getByRole('button', { name: 'Скопировать информацию' }))
+
+  expect(await screen.findByText('Информация скопирована')).toBeTruthy()
+  expect(writeText).toHaveBeenCalledWith('Консультация — 26.10.2026, 09:30–10:00 (Europe/Moscow)')
+  expect(screen.getByText('Тип события: Консультация')).toBeTruthy()
+})
+
+test('если скопировать не удалось, гость видит ошибку и данные встречи', async () => {
+  stubConfirmedBooking()
+  const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+  await confirmBooking()
+  fireEvent.click(screen.getByRole('button', { name: 'Скопировать информацию' }))
+
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Не удалось скопировать информацию. Скопируйте её вручную.')
+  expect(screen.getByText('Тип события: Консультация')).toBeTruthy()
+  expect(screen.getByText('Начало: 26 окт. 2026 г., 09:30')).toBeTruthy()
 })
 
 test('после подтверждения переход к другому типу показывает его календарь', async () => {
