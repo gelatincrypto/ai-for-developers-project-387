@@ -367,6 +367,23 @@ test('если скопировать не удалось, гость видит
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Не удалось скопировать информацию. Скопируйте её вручную.')
   expect(screen.getByText('Тип события: Консультация')).toBeTruthy()
   expect(screen.getByText('Начало: 26 окт. 2026 г., 09:30')).toBeTruthy()
+  const field = screen.getByRole('textbox', { name: 'Текст для копирования' }) as HTMLInputElement
+  expect(field.value).toBe('Консультация — 26.10.2026, 09:30–10:00 (Europe/Moscow)')
+  expect(field.readOnly).toBe(true)
+})
+
+test('если Clipboard API недоступен, гость копирует текст из поля вручную', async () => {
+  stubConfirmedBooking()
+  Reflect.deleteProperty(navigator, 'clipboard')
+
+  await confirmBooking()
+  fireEvent.click(screen.getByRole('button', { name: 'Скопировать информацию' }))
+
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Не удалось скопировать информацию. Скопируйте её вручную.')
+  const field = screen.getByRole('textbox', { name: 'Текст для копирования' }) as HTMLInputElement
+  expect(field.value).toBe('Консультация — 26.10.2026, 09:30–10:00 (Europe/Moscow)')
+  expect(field.readOnly).toBe(true)
+  expect(screen.getByText('Тип события: Консультация')).toBeTruthy()
 })
 
 test('после подтверждения переход к другому типу показывает его календарь', async () => {

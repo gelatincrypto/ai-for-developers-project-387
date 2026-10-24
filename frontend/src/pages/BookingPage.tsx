@@ -121,11 +121,13 @@ function BookingContent({ eventTypeId }: { eventTypeId?: string }) {
     }).format(new Date(value))
   }
 
+  const bookingInfo = confirmation && calendar ? bookingInfoText(confirmation, calendar.ownerTimeZone) : ''
+
   async function copyBookingInfo() {
-    if (!confirmation || !calendar) return
+    if (!bookingInfo) return
     setCopyStatus('idle')
     try {
-      await navigator.clipboard.writeText(bookingInfoText(confirmation, calendar.ownerTimeZone))
+      await navigator.clipboard.writeText(bookingInfo)
       setCopyStatus('copied')
     } catch {
       setCopyStatus('error')
@@ -183,7 +185,15 @@ function BookingContent({ eventTypeId }: { eventTypeId?: string }) {
                     <Text>Окончание: {showTime(confirmation.end, calendar.ownerTimeZone)}</Text>
                     <Button onClick={() => void copyBookingInfo()}>Скопировать информацию</Button>
                     {copyStatus === 'copied' && <Text role="status">Информация скопирована</Text>}
-                    {copyStatus === 'error' && <Text role="alert" c="red">Не удалось скопировать информацию. Скопируйте её вручную.</Text>}
+                    {copyStatus === 'error' && <>
+                      <Text role="alert" c="red">Не удалось скопировать информацию. Скопируйте её вручную.</Text>
+                      <TextInput
+                        label="Текст для копирования"
+                        value={bookingInfo}
+                        readOnly
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                    </>}
                   </Paper>
                 ) : calendar.slots.length === 0 ? <Text>В ближайшие 14 дней свободных слотов нет</Text> : (
                   <>
